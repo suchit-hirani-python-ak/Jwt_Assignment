@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 class Token(BaseModel):
@@ -11,3 +11,5 @@ class TokenPayload(BaseModel):
     user_id: int
     role: str
     exp: int
+    
+    model_config = ConfigDict(from_attributes=True)
