@@ -1,11 +1,13 @@
 from app.db.session import AsyncSession
 from app.models.user import User
-from sqlalchemy import select
+from sqlalchemy import select, update
+from app.schemas.user import UserCreate
+from app.models.token import TokenGeneration
 class UserRepository:
     def __init__(self, db:AsyncSession):
         self.db = db
 
-    async def get_by_id(self, user_id: int) -> User:
+    async def get_by_id(self, user_id: int) -> User | None:
         return await self.db.get(User,user_id)
     
     async def list_all(self) -> list[User]:
@@ -18,9 +20,23 @@ class UserRepository:
         result = await self.db.execute(query)
         return result.scalars().first()
 
-    async def create(self,obj:User) -> User:
-        self.db.add(obj)
-        await self.db.commit()
-        await self.db.refresh(obj)
-        return obj
+    async def create(self, user: User) -> User:
+        self.db.add(user)
+        await self.db.commit()   # Saves to DB and generates the ID
+        await self.db.refresh(user) # Pulls the new ID back into the 'user' object
+        return user
+    
+    async def update_token(self, user_id:int,token:str):
+        query = update(TokenGeneration).where(TokenGeneration.user_id == user_id, TokenGeneration.is_used == False).values(is_used = True)
+        await self.db.execute(query)
         
+        new_token_entry = TokenGeneration(
+            refresh_token=token,
+            user_id=user_id,
+            is_used=False
+        )
+        self.db.add(new_token_entry)
+        
+        # Commit changes (Invalidates old + Adds new)
+        await self.db.commit()
+        return new_token_entry

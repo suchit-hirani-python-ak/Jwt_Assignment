@@ -1,5 +1,4 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from app.core.config  import settings
 
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 engine = create_async_engine(
@@ -19,4 +18,4 @@ async def get_db():
     try:
         yield db 
     finally:
-        db.close()
+        await db.close()
