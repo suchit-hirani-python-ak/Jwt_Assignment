@@ -8,7 +8,6 @@ class Token(BaseModel):
     
 class TokenResponse(BaseModel):
     sub: str
-    user_id: int
     role: str
     exp: int
     

@@ -7,8 +7,6 @@ class UserRepository:
     def __init__(self, db:AsyncSession):
         self.db = db
 
-    async def get_by_id(self, user_id: int) -> User | None:
-        return await self.db.get(User,user_id)
     
     async def list_all(self) -> list[User]:
         query = select(User)
@@ -22,7 +20,7 @@ class UserRepository:
 
     async def create(self, user: User) -> User:
         self.db.add(user)
-        await self.db.commit()   # Saves to DB and generates the ID
+        await self.db.commit() 
         await self.db.refresh(user) # Pulls the new ID back into the 'user' object
         return user
     
@@ -37,6 +35,5 @@ class UserRepository:
         )
         self.db.add(new_token_entry)
         
-        # Commit changes (Invalidates old + Adds new)
         await self.db.commit()
         return new_token_entry

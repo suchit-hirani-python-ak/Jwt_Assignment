@@ -13,4 +13,4 @@ class TokenGeneration(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     
     # Use a STRING "User" instead of importing the class
-    user: Mapped["User"] = relationship("User", back_populates="tokens")
+    user: Mapped["User"] = relationship("User", back_populates="tokens") # type: ignore
