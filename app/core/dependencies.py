@@ -11,8 +11,8 @@ def get_current_user(token: str=Depends(oauth2_scheme)) -> TokenResponse:
     try:
         payload = jwt.decode(
             token,
-            settings.secret_key.get_secret_value(),
-            algorithms=[settings.algorithm]
+            settings.access_secret_key.get_secret_value(),
+            algorithms=[settings.algorithm],
         )
         token_data = TokenResponse(**payload)
         

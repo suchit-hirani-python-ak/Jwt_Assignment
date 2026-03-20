@@ -35,3 +35,11 @@ async def refresh_access_token(request: RefreshRequest,
     db: AsyncSession = Depends(get_db)
 ):
     return await AuthService(db).refresh_token(request,token)
+
+# @router.post("/refresh", response_model=Token)
+# async def refresh_access_token(
+#     request: RefreshRequest,
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     # Remove 'token' from the call below too
+#     return await AuthService(db).refresh_token(request) 

@@ -6,7 +6,8 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8"
     )
-    secret_key: SecretStr
+    access_secret_key: SecretStr
+    refresh_secret_key: SecretStr
     algorithm: str
     access_token_expire_minutes: int
     refresh_token_expire_days: int 

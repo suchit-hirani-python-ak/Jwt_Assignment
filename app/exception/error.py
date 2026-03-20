@@ -23,8 +23,8 @@ class Unauthorized(BaseException):
         super().__init__(message=message, status_code=401)
 
 class Forbidden(BaseException):
-    def __init__(self):
-        super().__init__(message="only admin allowed to access", status_code=403)
+    def __init__(self,message="only admin allowed to access"):
+        super().__init__(message=message, status_code=403)
 
 class AuthException(BaseException):
     def __init__(self, message):
