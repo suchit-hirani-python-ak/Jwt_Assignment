@@ -6,6 +6,7 @@ from pwdlib import PasswordHash
 
 from fastapi.security import OAuth2PasswordBearer
 
+from app.exception.error import AuthException
 from app.models.user import User
 
 # The tokenUrl is where the "Authorize" button will send the username/password
@@ -46,6 +47,8 @@ def generate_tokens(user: User):
         data={"sub": user.email, "user_id": user.id, "role": user.role},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
     )
+    if settings.access_token_expire_minutes > 30:
+        raise AuthException("Token has expired")
     
     refresh_token = create_access_token(
         data={"sub": user.email, "type": "refresh"},

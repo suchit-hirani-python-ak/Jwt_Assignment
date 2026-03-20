@@ -8,7 +8,10 @@ from contextlib import asynccontextmanager
 from app.api import auth, tasks, users
 from app.core import security
 from app.exception.error import BaseException
+from fastapi_limiter.depends import RateLimiter
+from pyrate_limiter import Duration, Limiter, Rate
 
+rate_limit = RateLimiter(limiter=Limiter(Rate(5,Duration.SECOND*10)))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,11 +22,14 @@ async def lifespan(app: FastAPI):
     # Clean up on shutdown
     await engine.dispose()
     
-app = FastAPI(title="JWT Assignment", lifespan=lifespan)
+app = FastAPI(title="JWT Assignment", lifespan=lifespan, dependencies=[Depends(rate_limit)])
 
 
+@app.get("/")
+def server():
+    return {"status": "server is running"}
 
-# Fix: include_router is a method, not a decorator
+
 app.include_router(auth.router, prefix='/auth',tags=["Authentication"])
 app.include_router(users.router, prefix='/users',tags=["users"])
 app.include_router(tasks.router, prefix='/tasks',tags=["Tasks"])
@@ -39,7 +45,3 @@ async def global_app_exception_handler(request: Request, exc: BaseException):
         },headers={"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
     )
 
-# Fix: Added a route decorator so this is reachable
-@app.get("/")
-def server():
-    return {"status": "server is running"}

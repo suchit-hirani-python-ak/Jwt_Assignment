@@ -1,7 +1,5 @@
-from typing import Annotated
 import jwt 
-from fastapi import Depends, HTTPException, status
-from pydantic import ValidationError
+from fastapi import Depends
 from app.core.config import settings
 from app.core.security import oauth2_scheme
 from app.exception.error import Forbidden, Unauthorized
