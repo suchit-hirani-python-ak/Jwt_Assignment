@@ -1,15 +1,13 @@
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI,Depends, Request
-from app.core.security import oauth2_scheme
-from app.db.base import Base
-from app.db.session import engine
-from contextlib import asynccontextmanager
-from app.api import auth, tasks, users
-from app.core import security
-from app.exception.error import BaseException
 from fastapi_limiter.depends import RateLimiter
 from pyrate_limiter import Duration, Limiter, Rate
+from contextlib import asynccontextmanager
+from app.db.base import Base
+from app.db.session import engine
+from app.api import auth, tasks, users
+from app.exception.error import BaseException
 
 rate_limit = RateLimiter(limiter=Limiter(Rate(5,Duration.SECOND*10)))
 

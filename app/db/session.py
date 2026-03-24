@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-
-DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+from app.core.config import settings
+DATABASE_URL = settings.sql_url
 engine = create_async_engine(
     DATABASE_URL,
     connect_args = {"check_same_thread":False}

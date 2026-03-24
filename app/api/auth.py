@@ -31,10 +31,9 @@ async def login(
 
 @router.post("/refresh", response_model=Token)
 async def refresh_access_token(request: RefreshRequest,
-    token: str = Depends(oauth2_scheme), 
     db: AsyncSession = Depends(get_db)
 ):
-    return await AuthService(db).refresh_token(request,token)
+    return await AuthService(db).refresh_token(request)
 
 # @router.post("/refresh", response_model=Token)
 # async def refresh_access_token(

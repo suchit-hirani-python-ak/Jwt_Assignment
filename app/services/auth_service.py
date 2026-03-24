@@ -1,11 +1,11 @@
 from fastapi.security import OAuth2PasswordRequestForm
 import jwt
+from fastapi import Depends,Response
 from app.core.dependencies import get_current_user
 from app.exception.error import BadRequest, Forbidden, NotFound, Unauthorized
 from app.repositories.user_repository import UserRepository,User
 from app.schemas.token import RefreshRequest
 from app.schemas.user import  UserCreate
-from fastapi import Depends,Response
 from app.core.config import settings
 from app.db.session import AsyncSession
 from app.core.security import oauth2_scheme, redis_client, verify_password, generate_tokens,hash_password
@@ -80,7 +80,6 @@ class AuthService:
         payload = get_current_user(token) 
         
         user = await self.repo.get_by_email(payload.sub)
-        
         if not user:
             raise NotFound("User not found")
             
@@ -91,21 +90,32 @@ class AuthService:
             raise Forbidden()
         return await self.repo.list_all()
 
+    async def refresh_token(self, request: RefreshRequest):
+    # 1. Clean the token string properly
+        token = request.refresh_token.strip().strip('"') 
+        try:
+            payload = jwt.decode(
+                token, 
+                settings.refresh_secret_key.get_secret_value(), 
+                algorithms=[settings.algorithm]
+            )
+        except jwt.exceptions.InvalidSignatureError:
+            raise Unauthorized("Invalid refresh token signature")
+        except jwt.exceptions.ExpiredSignatureError:
+            raise Unauthorized("Refresh token expired")
 
-    async def refresh_token(self,request:RefreshRequest,token: str=Depends(oauth2_scheme)):
-        # token = request.refresh_token.strip('"').replace('%22', '')
-        payload = jwt.decode(token, settings.refresh_secret_key.get_secret_value(), algorithms=[settings.algorithm])
-        
-        
         if payload.get("type") != "refresh":
-            raise Unauthorized("not authorized")
+            raise Unauthorized("This is not a refresh token")
 
+        # 2. Extract and clean the email from the payload
         email = payload.get("sub")
         if not email:
-            raise Unauthorized()
-        
+            raise Unauthorized("Token payload missing email")
+
+        # 2. Change get_by_id to get_by_email
         user = await self.repo.get_by_email(email)
         if not user:
+            # Debugging tip: Print what was actually found in the token
             raise NotFound("user not found")
-            
+                
         return generate_tokens(user)

@@ -21,4 +21,5 @@ dependencies = [
     "fastapi-limiter>=0.2.0",
     "pyrate-limiter>=4.0.2",
     "redis>=7.3.0",
+    "docker>=7.1.0",
 ]

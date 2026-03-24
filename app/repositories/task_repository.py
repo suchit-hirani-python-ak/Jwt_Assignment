@@ -1,7 +1,6 @@
+from sqlalchemy import select,update, delete
 from app.models.task import Task
 from app.db.session import AsyncSession
-from sqlalchemy import select,update, delete
-
 from app.schemas.task import TaskRequest
 
 class TaskRepository:

@@ -1,10 +1,9 @@
 from datetime import timezone, datetime, timedelta
 import jwt
-from app.core.config import settings
 from pwdlib import PasswordHash
-import redis.asyncio as redis
 from fastapi.security import OAuth2PasswordBearer
-
+import redis.asyncio as redis
+from app.core.config import settings
 from app.models.user import User
 
 
@@ -48,11 +47,11 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> 
 
 def generate_tokens(user: User):
     access_token = create_access_token(
-        data={"sub": str(user.id), "role": user.role}
+        data={"sub": str(user.email), "role": user.role}
+        
     )
-    
     refresh_token = create_refresh_token(
-        data={"sub": str(user.id)}
+        data={"sub": str(user.email)}
     )
     
     return {

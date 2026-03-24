@@ -1,7 +1,6 @@
+from sqlalchemy import select, update
 from app.db.session import AsyncSession
 from app.models.user import User
-from sqlalchemy import select, update
-from app.schemas.user import UserCreate
 from app.models.token import TokenGeneration
 class UserRepository:
     def __init__(self, db:AsyncSession):
@@ -12,6 +11,11 @@ class UserRepository:
         query = select(User)
         result =await self.db.execute(query)
         return list(result.scalars().all())
+
+    async def get_by_id(self, id: int):
+        query = select(User).where(User.id == id)
+        result = await self.db.execute(query)
+        return result.scalars().first()
     
     async def get_by_email(self, email: str) -> User | None:
         query = select(User).where(User.email == email)
