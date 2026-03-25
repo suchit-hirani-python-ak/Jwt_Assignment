@@ -10,6 +10,15 @@ services:
       - .:/app
       - app_data:/app/data
     restart: always
+  
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    # Tells Redis to save data to the volume every 60 seconds if 1 change happens
+    command: redis-server --save 60 1 --loglevel warning
 
 volumes:
   app_data:
+  redis_data:

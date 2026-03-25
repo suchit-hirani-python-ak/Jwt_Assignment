@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.models.user import User
 
 
-redis_client = redis.from_url("redis://localhost:6379", decode_responses=True)
+redis_client = redis.from_url("redis://redis:6379", decode_responses=True)
 
 # The tokenUrl is where the "Authorize" button will send the username/password
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login") 
