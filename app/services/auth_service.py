@@ -1,52 +1,121 @@
+from fastapi.security import OAuth2PasswordRequestForm
+import jwt
+from fastapi import Depends,Response
+from app.core.dependencies import get_current_user
+from app.exception.error import BadRequest, Forbidden, NotFound, Unauthorized
 from app.repositories.user_repository import UserRepository,User
-from app.schemas.user import UserCreate
-from app.core.dependencies import decode_token
-from app.core import security
-from fastapi import HTTPException
-from datetime import timedelta
-from app.core import security
+from app.schemas.token import RefreshRequest
+from app.schemas.user import  UserCreate
 from app.core.config import settings
+from app.db.session import AsyncSession
+from app.core.security import oauth2_scheme, redis_client, verify_password, generate_tokens,hash_password
 
+# redis_client = redis.from_url("redis://localhost:6379", decode_responses=True)
 class AuthService:
-    def __init__(self,db:UserRepository):
-        self.repo = db
+    def __init__(self,db:AsyncSession):
+        self.repo = UserRepository(db)
         
-    async def register(self, payload:UserCreate) -> User:
+    async def register(self, payload: UserCreate) -> User:
         if await self.repo.get_by_email(payload.email):
-            raise HTTPException(status_code=400, detail="User already exists")
-        
+            raise BadRequest("user already exists")
+            
         db_user = User(
-            email = payload.email,
-            hashed_password = security.hash_password(payload.password),
-            role = payload.role or "user"
+            email=payload.email.lower(),
+            hashed_password=hash_password(payload.password),
+            role=payload.role or "user"
         )
-        return await self.repo.create(db_user) 
-    
-    async def login(self, email: str, password: str):
-        """Logic for User Login & JWT generation."""
+        return await self.repo.create(db_user)
+
+
+    async def login(self, payload: OAuth2PasswordRequestForm, response: Response):
+        email = payload.username
+        lockout_key = f"lockout:{email}"
+        attempts_key = f"attempts:{email}"
+
+        # 1. Check if user is currently locked out
+        if await redis_client.exists(lockout_key):
+            ttl = await redis_client.ttl(lockout_key)
+            raise Forbidden(f"Account locked try again in {ttl//60} minutes")
+
         user = await self.repo.get_by_email(email)
-        if not user or not security.verify_password(password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # 2. Verify Credentials
+        if not user or not verify_password(payload.password, user.hashed_password):
+            # --- FAILURE BLOCK ---
+            failed_count = await redis_client.incr(attempts_key)
+            
+            if failed_count == 1:
+                await redis_client.expire(attempts_key, 600) # 10 min window
 
-        return self._generate_tokens(user)
+            if failed_count >= 5:
+                # Lock for 10 minutes
+                await redis_client.setex(lockout_key, 600, "locked")
+                await redis_client.delete(attempts_key)
+                raise Forbidden("Too many attempts. Locked for 10 min.")
+                
+            raise Unauthorized(f"Invalid credentials. {5 - failed_count} attempts left.")
 
-    def _generate_tokens(self, user: User):
-        """Helper to create Access (short) and Refresh (long) tokens."""
-        # 1. Access Token (with user_id and role for IDOR/RBAC)
-        access_delta = timedelta(minutes=settings.access_token_expire_minutes)
-        access_token = security.create_access_token(
-            data={"sub": user.email, "user_id": user.id, "role": user.role},
-            expires_delta=access_delta
+        # --- SUCCESS BLOCK ---
+        # Delete the previous "session of error" (the counter) immediately
+        await redis_client.delete(attempts_key)
+
+        tokens = generate_tokens(user)
+        await self.repo.update_token(user.id, tokens["refresh_token"])
+        
+        response.set_cookie(
+            key="refresh_token",
+            value=tokens["refresh_token"],
+            httponly=True,
+            secure=True, 
+            samesite="lax",
+            max_age=(settings.refresh_token_expire_days * 24 * 60 + 330) * 60
         )
         
-        # 2. Refresh Token (Longer lived, e.g., 7 days)
-        refresh_token = security.create_access_token(
-            data={"sub": user.email, "type": "refresh"},
-            expires_delta=timedelta(days=7)
-        )
+        return tokens
+
+
+
+    
+    async def current_user(self, token: str) -> User:
+        payload = get_current_user(token) 
         
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer"
-        }
+        user = await self.repo.get_by_email(payload.sub)
+        if not user:
+            raise NotFound("User not found")
+            
+        return user
+    
+    async def all_users(self,user:User)->list[User]:
+        if user.role != "admin":
+            raise Forbidden()
+        return await self.repo.list_all()
+
+    async def refresh_token(self, request: RefreshRequest):
+    # 1. Clean the token string properly
+        token = request.refresh_token.strip().strip('"') 
+        try:
+            payload = jwt.decode(
+                token, 
+                settings.refresh_secret_key.get_secret_value(), 
+                algorithms=[settings.algorithm]
+            )
+        except jwt.exceptions.InvalidSignatureError:
+            raise Unauthorized("Invalid refresh token signature")
+        except jwt.exceptions.ExpiredSignatureError:
+            raise Unauthorized("Refresh token expired")
+
+        if payload.get("type") != "refresh":
+            raise Unauthorized("This is not a refresh token")
+
+        # 2. Extract and clean the email from the payload
+        email = payload.get("sub")
+        if not email:
+            raise Unauthorized("Token payload missing email")
+
+        # 2. Change get_by_id to get_by_email
+        user = await self.repo.get_by_email(email)
+        if not user:
+            # Debugging tip: Print what was actually found in the token
+            raise NotFound("user not found")
+                
+        return generate_tokens(user)

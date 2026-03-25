@@ -1,0 +1,29 @@
+class BaseException(Exception):
+    def __init__(self,message: str,status_code: int = 400):
+        self.message = message
+        self.status_code = status_code
+        
+class BadRequest(BaseException):
+    def __init__(self,message):
+        super().__init__(message = message,
+        status_code = 400)
+
+class NotFound(BaseException):
+    def __init__(self, message):
+        super().__init__(message = message, status_code=404)
+
+class ServerError(BaseException):
+    def __init__(self):
+        super().__init__(message = "server side error", status_code = 500)
+        
+class Unauthorized(BaseException):
+    def __init__(self, message: str="email or password is wrong"):
+        super().__init__(message=message, status_code=401)
+
+class Forbidden(BaseException):
+    def __init__(self,message="only admin allowed to access"):
+        super().__init__(message=message, status_code=403)
+
+class AuthException(BaseException):
+    def __init__(self, message):
+        super().__init__(message=message, status_code=401)

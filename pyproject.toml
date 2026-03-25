@@ -18,4 +18,8 @@ dependencies = [
     "uvicorn>=0.41.0",
     "python-multipart>=0.0.22",
     "argon2-cffi>=25.1.0",
+    "fastapi-limiter>=0.2.0",
+    "pyrate-limiter>=4.0.2",
+    "redis>=7.3.0",
+    "docker>=7.1.0",
 ]
