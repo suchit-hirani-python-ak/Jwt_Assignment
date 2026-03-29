@@ -16,16 +16,48 @@ async def create_task(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: TokenResponse = Depends(get_current_user) # Injected from Header
 ):
-    # Pass the ID extracted from the SECURE token payload
-    # Assuming 'sub' holds your user_id string/int
+    """
+    Create a new task for the authenticated user.
+
+    Args:
+        payload (TaskRequest): Task details provided by the user.
+        db (AsyncSession): Database session dependency.
+        current_user (TokenResponse): Authenticated user extracted from JWT.
+
+    Returns:
+        TaskResponse: Created task details.
+    """
     return await TaskService(db).create(payload, current_user.sub)
 
 @router.get("",response_model=list[TaskResponse])
 async def all_task(db:Annotated[AsyncSession, Depends(get_db)],current_user: TokenResponse=Depends(get_current_user)):
+    """
+    Create a new task for the authenticated user.
+
+    Args:
+        payload (TaskRequest): Task details provided by the user.
+        db (AsyncSession): Database session dependency.
+        current_user (TokenResponse): Authenticated user extracted from JWT.
+
+    Returns:
+        TaskResponse: Created task details.
+    """
     return await TaskService(db).get_task_all(current_user.sub,current_user.role)
 
 @router.get("/{id}",response_model=TaskByIdResponse)
-async def task_by_id(id: int, db:Annotated[AsyncSession, Depends(get_db)],current_user: TokenResponse=Depends(get_current_user)):
+async def task_by_id(id: int, db:Annotated[AsyncSession, Depends(get_db)],
+    current_user: TokenResponse=Depends(get_current_user)):
+    """
+    Retrieve a specific task by ID.
+
+    Args:
+        id (int): Task ID.
+        db (AsyncSession): Database session.
+        current_user (TokenResponse): Authenticated user.
+
+    Returns:
+        TaskByIdResponse: Task details.
+    """
     return await TaskService(db).get_task_by_id(id, current_user.sub)
 
 
@@ -33,17 +65,37 @@ async def task_by_id(id: int, db:Annotated[AsyncSession, Depends(get_db)],curren
 @router.put("/{id}", response_model=TaskUpdateStatus)
 async def status_update(
     id: int, 
-    task: TaskRequest,  # Move this up! (No default value)
-    db: Annotated[AsyncSession, Depends(get_db)], # Has default value
-    current_user: TokenResponse = Depends(get_current_user) # Has default value
+    task: TaskRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenResponse, Depends(get_current_user)]
 ):
+    """update an existing task
+
+    Args:
+        id (int): Retrive Task Id
+        task (TaskRequest): _description_
+        db (Annotated[AsyncSession, Depends): _description_
+
+    Returns:
+        TaskUpdateStatus: Update task
+    """
     return await TaskService(db).update_task(id, current_user.sub, task)
 
 @router.delete("/{id}")
 async def delete(id: int,
-                 # Move this up! (No default value)
-    db: Annotated[AsyncSession, Depends(get_db)], # Has default value
-    current_user: TokenResponse = Depends(get_current_user) # Has default value
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenResponse, Depends(get_current_user)]
 ):
+    """
+    Delete a task by ID.
+
+    Args:
+        id (int): Task ID.
+        db (AsyncSession): Database session.
+        current_user (TokenResponse): Authenticated user.
+
+    Returns:
+        dict: Confirmation of deletion.
+    """
     return await TaskService(db).delete_task_by_id(id,current_user.sub)
 
