@@ -13,6 +13,7 @@ rate_limit = RateLimiter(limiter=Limiter(Rate(5,Duration.SECOND*10)))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("🚀 Open: http://localhost:8000/docs")
     # Create tables on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

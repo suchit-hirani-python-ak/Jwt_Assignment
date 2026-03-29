@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.db.session import AsyncSession
 from app.core.security import oauth2_scheme, redis_client, verify_password, generate_tokens,hash_password
 
-# redis_client = redis.from_url("redis://localhost:6379", decode_responses=True)
+
 class AuthService:
     def __init__(self,db:AsyncSession):
         self.repo = UserRepository(db)
@@ -32,31 +32,26 @@ class AuthService:
         lockout_key = f"lockout:{email}"
         attempts_key = f"attempts:{email}"
 
-        # 1. Check if user is currently locked out
         if await redis_client.exists(lockout_key):
             ttl = await redis_client.ttl(lockout_key)
             raise Forbidden(f"Account locked try again in {ttl//60} minutes")
 
         user = await self.repo.get_by_email(email)
         
-        # 2. Verify Credentials
         if not user or not verify_password(payload.password, user.hashed_password):
-            # --- FAILURE BLOCK ---
             failed_count = await redis_client.incr(attempts_key)
             
             if failed_count == 1:
                 await redis_client.expire(attempts_key, 600) # 10 min window
 
             if failed_count >= 5:
-                # Lock for 10 minutes
+
                 await redis_client.setex(lockout_key, 600, "locked")
                 await redis_client.delete(attempts_key)
                 raise Forbidden("Too many attempts. Locked for 10 min.")
                 
             raise Unauthorized(f"Invalid credentials. {5 - failed_count} attempts left.")
 
-        # --- SUCCESS BLOCK ---
-        # Delete the previous "session of error" (the counter) immediately
         await redis_client.delete(attempts_key)
 
         tokens = generate_tokens(user)
@@ -91,7 +86,6 @@ class AuthService:
         return await self.repo.list_all()
 
     async def refresh_token(self, request: RefreshRequest):
-    # 1. Clean the token string properly
         token = request.refresh_token.strip().strip('"') 
         try:
             payload = jwt.decode(
@@ -106,16 +100,13 @@ class AuthService:
 
         if payload.get("type") != "refresh":
             raise Unauthorized("This is not a refresh token")
-
-        # 2. Extract and clean the email from the payload
+        
         email = payload.get("sub")
         if not email:
             raise Unauthorized("Token payload missing email")
 
-        # 2. Change get_by_id to get_by_email
         user = await self.repo.get_by_email(email)
         if not user:
-            # Debugging tip: Print what was actually found in the token
             raise NotFound("user not found")
                 
         return generate_tokens(user)

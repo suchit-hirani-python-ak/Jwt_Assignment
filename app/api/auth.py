@@ -17,6 +17,16 @@ router = APIRouter()
 # Use Annotated with Depends for modern dependency injection
 @router.post("/register",response_model=UserResponse)
 async def create_user(payload:UserCreate,db: Annotated[AsyncSession,Depends(get_db)]):
+    """
+    Register a new user.
+
+    Args:
+        payload (UserCreate): User registration details such as email, password, etc.
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        UserResponse: Details of the newly created user.
+    """
     return await AuthService(db).register(payload)
 
 @router.post("/login", response_model=Token)
@@ -25,20 +35,35 @@ async def login(
     payload: Annotated[OAuth2PasswordRequestForm, Depends()], 
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
+    """
+    Authenticate user and generate JWT tokens.
+
+    Args:
+        response (Response): FastAPI response object used to set cookies.
+        payload (OAuth2PasswordRequestForm): Form data containing username and password.
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        Token: Access and refresh tokens.
+    """
     return await AuthService(db).login(payload,response)
 
 
 
 @router.post("/refresh", response_model=Token)
 async def refresh_access_token(request: RefreshRequest,
-    db: AsyncSession = Depends(get_db)
+    db: Annotated[AsyncSession, Depends(get_db)]
 ):
+    """
+    Generate a new access token using a refresh token.
+
+    Args:
+        request (RefreshRequest): Contains refresh token.
+        db (AsyncSession): Database session.
+
+    Returns:
+        Token: New access and refresh tokens.
+    """
     return await AuthService(db).refresh_token(request)
 
-# @router.post("/refresh", response_model=Token)
-# async def refresh_access_token(
-#     request: RefreshRequest,
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     # Remove 'token' from the call below too
-#     return await AuthService(db).refresh_token(request) 
+

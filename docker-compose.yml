@@ -1,22 +1,31 @@
 name: jwt-assignment
+
 services:
   app:
     build: .
     ports:
       - "8000:8000"
-    env_file:
-      - .env
+    environment:
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+
+      redis_url: ${REDIS_URL:-redis://redis:6379}
+      sql_url: ${SQL_URL:-sqlite+aiosqlite:///./data/app.db}
+      access_secret_key: ${ACCESS_SECRET_KEY:-accesssecret}
+      refresh_secret_key: ${REFRESH_SECRET_KEY:-refreshsecret}
+      refresh_token_expire_days: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
     volumes:
       - .:/app
       - app_data:/app/data
     restart: always
-  
+    depends_on:
+      - redis
+
   redis:
     image: redis:7-alpine
     restart: always
     volumes:
       - redis_data:/data
-    # Tells Redis to save data to the volume every 60 seconds if 1 change happens
     command: redis-server --save 60 1 --loglevel warning
 
 volumes:
